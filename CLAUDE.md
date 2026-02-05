@@ -441,12 +441,11 @@ AI가 자동으로 포트를 배정하고 웹서버를 관리하는 시스템. *
 
 ## API 사용법 (AI용)
 
-### 서버 시작 (포트 자동 배정) - 2026 업데이트
+### 서버 시작 (포트 자동 배정)
 
 ```bash
 curl -X POST http://localhost:45000/api/servers/start \
   -H "Content-Type: application/json" \
-  -H "X-Port-Manager-Key: port-manager-secret-key-2025" \
   -d '{
     "name": "my-app",
     "command": "python3 -m http.server {port}",
@@ -469,9 +468,9 @@ curl -X POST http://localhost:45000/api/servers/start \
 }
 ```
 
-**필수 헤더**: `X-Port-Manager-Key: port-manager-secret-key-2025`
 **필수 필드**: `name`, `command`, `reason`, `duration`
 **핵심**: `{port}` 플레이스홀더 필수. 시스템이 자동으로 포트 주입.
+**참고**: 내부 로컬호스트 전용이므로 인증 불필요
 
 ### 서버 목록 조회
 
