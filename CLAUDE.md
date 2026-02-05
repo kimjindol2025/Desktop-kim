@@ -126,7 +126,7 @@ pm_list
 claude_status
 
 # 대시보드에서 모니터링
-http://localhost:8080/dashboard.html
+http://localhost:45001/dashboard.html
 ```
 
 ---
