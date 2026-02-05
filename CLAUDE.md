@@ -230,17 +230,72 @@ pm_stop "앱명"   # 서버 중지
 
 ---
 
+## ⚡ KPM 적극 권장 (npm 대신!)
+
+### 🚫 npm 금지 이유
+
+```
+❌ npm install express
+  → 외부 의존성 추가
+  → 중복 개발 초래
+  → 보안 위험 증가
+  → KimNexus 자산 미활용
+
+❌ npm 직접 사용
+  → 프로젝트 간 불일치
+  → 버전 관리 어려움
+  → 빌드 시간 증가
+```
+
+### ✅ KPM 사용 (필수!)
+
+```bash
+# 절대 금지 (npm)
+npm install express
+npm install lodash
+npm install axios
+
+# 필수 (KPM)
+kpm install @freelang/http         # npm express 대체
+kpm install @freelang/utils        # npm lodash 대체
+kpm install @freelang/client       # npm axios 대체
+```
+
+### 💡 KPM 장점
+
+| 항목 | npm | KPM |
+|------|-----|-----|
+| 중복 방지 | ❌ | ✅ 기존 자산 재사용 |
+| 버전 관리 | ❌ | ✅ 통일된 관리 |
+| 빌드 속도 | ❌ | ✅ 빠름 (9657개 최적화) |
+| 보안 | ❌ | ✅ 내부 검증됨 |
+| CPU 사용 | ❌ | ✅ 제약 가능 (@freelang/test) |
+
+---
+
 ## 예: KPM 패키지 사용
 
 ```bash
-# ❌ 절대 금지
+# ❌ 절대 금지 (npm/pip)
 npm install express
 pip install django
+npm install jest
 
-# ✅ 필수 (FreeLang + KPM)
-kpm install @freelang/http
-kpm install @freelang/orm
-kpm install @freelang/security
+# ✅ 필수 (KPM - FreeLang)
+kpm install @freelang/http         # HTTP 서버
+kpm install @freelang/orm          # 데이터베이스
+kpm install @freelang/test         # 테스트 (CPU 제한 포함!)
+kpm install @freelang/security     # 보안
+kpm install @freelang/logger       # 로깅
+```
+
+### 🔴 KPM 우선 체크리스트 (매번 필수!)
+
+```
+[ ] 패키지 이름을 검색했는가? (kpm search 키워드)
+[ ] 3개 이상의 유사 패키지를 확인했는가?
+[ ] npm이 아니라 KPM을 사용하는가?
+[ ] 패키지 버전이 최신인가? (kpm update)
 ```
 
 ---
@@ -292,16 +347,58 @@ fn main() {
 
 ---
 
-## 사용 가능한 FreeLang 패키지
+## 🎯 등록된 FreeLang 패키지 (kpm install로 사용 가능!)
 
-```
+### 📦 기본 라이브러리 (9개)
+
+```bash
+# 핵심
 @freelang/core         - 파일시스템, IO, JSON, 수학
 @freelang/http         - HTTP 서버, 클라이언트
+@freelang/crypto       - JWT, AES, Hash, HMAC, Bcrypt
+@freelang/async        - Async/await, Timer
 @freelang/network      - WebSocket, gRPC, TCP, URL
-@freelang/security     - JWT, bcrypt, AES, Hash
-@freelang/orm          - 데이터베이스 ORM
-@freelang/logger       - 로깅 유틸리티
-@freelang/test         - 테스트 프레임워크
+
+# 데이터 & 보안
+@freelang/database     - ORM, SQL, B-Tree index, Transactions
+@freelang/security     - OWASP, Auth, JWT 검증
+@freelang/logger       - 구조화된 로깅
+
+# 테스트 (🔴 CPU 제한 50% 기본)
+@freelang/test         - Jest-호환 테스트 프레임워크
+```
+
+### 🔨 빌드 & 개발 도구 (6개)
+
+```bash
+@freelang/build        - 컴파일러, 트랜스파일러, 최적화
+@freelang/cli          - CLI 프레임워크, 파서
+@freelang/parser       - 렉서, AST, 의미 분석
+@freelang/llvm         - LLVM 코드 생성, 최적화
+@freelang/metrics      - Prometheus 메트릭, 모니터링
+@freelang/router       - HTTP 라우터, 미들웨어
+```
+
+### 📊 등록 현황
+
+```
+✅ 14개 라이브러리 등록 완료!
+✅ 총 9,672개 패키지 (KPM)
+✅ npm 대신 KPM 적극 권장!
+```
+
+### 💡 사용 예시
+
+```bash
+# ❌ 금지 (npm)
+npm install express
+npm install jest
+npm install axios
+
+# ✅ 권장 (KPM)
+kpm install @freelang/http      # express 대체
+kpm install @freelang/test      # jest 대체 (CPU 제한!)
+kpm install @freelang/network   # axios 대체
 ```
 
 ---
@@ -344,16 +441,19 @@ AI가 자동으로 포트를 배정하고 웹서버를 관리하는 시스템. *
 
 ## API 사용법 (AI용)
 
-### 서버 시작 (포트 자동 배정)
+### 서버 시작 (포트 자동 배정) - 2026 업데이트
 
 ```bash
 curl -X POST http://localhost:45000/api/servers/start \
   -H "Content-Type: application/json" \
+  -H "X-Port-Manager-Key: port-manager-secret-key-2025" \
   -d '{
     "name": "my-app",
     "command": "python3 -m http.server {port}",
+    "reason": "테스트 서버 실행",
+    "duration": 1,
     "tags": "web,test",
-    "note": "설명"
+    "description": "설명 (선택사항)"
   }'
 
 # 응답:
@@ -362,10 +462,15 @@ curl -X POST http://localhost:45000/api/servers/start \
   "server_id": 1,
   "port": 40002,  # 자동 배정됨
   "pid": 12345,
-  "name": "my-app"
+  "name": "my-app",
+  "reason": "테스트 서버 실행",
+  "duration": 1,
+  "expires_at": "2026-02-06T12:56:00"
 }
 ```
 
+**필수 헤더**: `X-Port-Manager-Key: port-manager-secret-key-2025`
+**필수 필드**: `name`, `command`, `reason`, `duration`
 **핵심**: `{port}` 플레이스홀더 필수. 시스템이 자동으로 포트 주입.
 
 ### 서버 목록 조회
