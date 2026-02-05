@@ -51,7 +51,98 @@ MUST list all known issues
 
 ---
 
-# ⚠️ Port Manager 참고사항
+# 🔴 PORT MANAGER 필수 정책 (모든 Claude Code 프로젝트)
+
+## 🎯 Port Manager의 진정한 목적
+
+**포트는 "유한한 자원"입니다. 책임있게 관리해야 합니다.**
+
+### 현재 상황
+- 100~10,000개의 포트가 필요한 대규모 인프라
+- 무분별한 포트 사용 → 충돌 → 오류
+- 포트 누수 → 자원 낭비
+- 어느 프로젝트가 어느 포트를 썼는지 추적 불가능
+
+### Port Manager의 역할
+```
+포트 자동 할당 → 충돌 방지
+모든 포트 기록 → 추적 가능
+TTL 기반 정리 → 자동 정리
+중앙화 관리 → discipline 강제
+```
+
+---
+
+## 🔴 강제 규칙 (절대 지켜야 함)
+
+### ❌ 절대 금지
+
+```bash
+# 이렇게 하면 안 됨
+PORT=3000 npm start
+PORT=8080 python app.py
+docker run -p 9000:8000 myimage
+```
+
+### ✅ 반드시 이렇게 해야 함
+
+```bash
+# 1️⃣ Port Manager에서 포트 할당받기
+pm_start "프로젝트명" "PORT={port} npm start" "프로젝트 설명"
+
+# 또는
+curl -X POST http://localhost:45000/api/servers/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-project",
+    "command": "PORT={port} npm start",
+    "reason": "프로젝트 설명",
+    "duration": 1
+  }'
+```
+
+---
+
+## ⏱️ 기간 설정 (duration)
+
+| 값 | 기간 | 용도 |
+|---|------|------|
+| 1 | 1일 | 테스트/개발 |
+| 2 | 7일 | 단기 프로젝트 |
+| 3 | 30일 | 중기 프로젝트 |
+| 4 | 무제한 | 장기 프로젝트 |
+
+**⚠️ 중요**: 기간이 끝나면 자동으로 포트가 해제됩니다!
+
+---
+
+## 📊 확인 방법
+
+```bash
+# 포트 현황 확인
+pm_list
+
+# 내 세션 상태
+claude_status
+
+# 대시보드에서 모니터링
+http://localhost:8080/dashboard.html
+```
+
+---
+
+## 🚨 위반 시 결과
+
+```
+❌ 포트 충돌 → 서비스 오류
+❌ 포트 누수 → 시스템 불안정
+❌ 추적 불가 → 디버깅 어려움
+❌ 대규모 인프라 마비 가능
+```
+
+---
+
+## 현재 구현
 
 **현재 Port Manager는 Python으로 구현되었습니다.**
 
@@ -63,25 +154,6 @@ MUST list all known issues
 향후:
 - v2.0은 FreeLang으로 새 개발
 - 점진적 마이그레이션
-
----
-
-# 🔴 PORT MANAGER 필수 정책 (모든 Claude Code 프로젝트)
-
-## 핵심 규칙
-
-**모든 Claude Code 프로젝트는 Port Manager를 통해 포트를 받아야 합니다.**
-
-```bash
-# ❌ 금지됨 (Claude Code 절대 실행 금지)
-PORT=3000 npm start
-pm2 start app.js --name myapp
-
-# ✅ 필수 (Claude Code가 자동 실행)
-curl -X POST http://localhost:45000/api/servers/start \
-  -H "Content-Type: application/json" \
-  -d '{"name":"앱이름","command":"PORT={port} npm start"}'
-```
 
 ---
 
