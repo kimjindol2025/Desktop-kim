@@ -11,7 +11,10 @@
 #
 
 PM_API="http://localhost:45000"
-# 참고: 2026-02-05 내부 로컬호스트 전용으로 인증 제거
+
+# Claude Code 세션 정보 추출
+CLAUDE_PID=$$ # 현재 쉘의 PID
+CLAUDE_SESSION_ID="${CLAUDE_SESSION_ID:-claude-code-$(date +%s)}"  # 자동 생성
 
 # ============================================
 # 1️⃣ 서버 시작 (포트 자동 할당)
@@ -68,6 +71,8 @@ EOF
 
   local response=$(curl -s -X POST "$PM_API/api/servers/start" \
     -H "Content-Type: application/json" \
+    -H "X-Claude-Session-ID: $CLAUDE_SESSION_ID" \
+    -H "X-Claude-PID: $CLAUDE_PID" \
     -d "$json_payload")
 
   # 응답 파싱
@@ -121,6 +126,8 @@ pm_list() {
   fi
 
   local response=$(curl -s "$PM_API/api/servers$query" \
+    -H "X-Claude-Session-ID: $CLAUDE_SESSION_ID" \
+    -H "X-Claude-PID: $CLAUDE_PID" \
 )
 
   local count=$(echo "$response" | jq '.servers | length' 2>/dev/null)
@@ -159,6 +166,8 @@ pm_stop() {
   echo "⏹️  서버 중지 중... (ID: $server_id)"
 
   local response=$(curl -s -X POST "$PM_API/api/servers/$server_id/stop" \
+    -H "X-Claude-Session-ID: $CLAUDE_SESSION_ID" \
+    -H "X-Claude-PID: $CLAUDE_PID" \
 )
 
   local success=$(echo "$response" | jq -r '.success // false' 2>/dev/null)
@@ -188,6 +197,8 @@ pm_cancel() {
   echo "🗑️  서버 취소 중... (ID: $server_id)"
 
   local response=$(curl -s -X POST "$PM_API/api/servers/$server_id/cancel" \
+    -H "X-Claude-Session-ID: $CLAUDE_SESSION_ID" \
+    -H "X-Claude-PID: $CLAUDE_PID" \
 )
 
   local success=$(echo "$response" | jq -r '.success // false' 2>/dev/null)
@@ -212,6 +223,8 @@ pm_ports() {
   echo ""
 
   local response=$(curl -s "$PM_API/api/ports/used" \
+    -H "X-Claude-Session-ID: $CLAUDE_SESSION_ID" \
+    -H "X-Claude-PID: $CLAUDE_PID" \
 )
 
   echo "$response" | jq -r '.ports[]' 2>/dev/null | sort -n | \
