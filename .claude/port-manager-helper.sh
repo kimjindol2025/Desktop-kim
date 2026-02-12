@@ -88,6 +88,53 @@ EOF
     echo "   URL: http://localhost:$port"
     echo ""
 
+    # Phase 5: 배포 질문 (duration=4인 경우만)
+    if [ "$duration" == "4" ]; then
+      echo "🌐 도메인 배포하시겠습니까? (y/n): "
+      read -r deploy_choice
+
+      if [[ "$deploy_choice" == "y" || "$deploy_choice" == "Y" ]]; then
+        read -p "서브도메인 입력 (예: myapp): " subdomain
+
+        if [ -n "$subdomain" ]; then
+          echo "📤 DNS Manager 호출 중..."
+
+          local deploy_payload=$(cat <<EOF2
+{
+  "name": "$name",
+  "command": "$command",
+  "reason": "$reason",
+  "duration": $duration,
+  "deploy": true,
+  "subdomain": "$subdomain",
+  "server": "253"
+  $([ -n "$tags" ] && echo ", \"tags\": \"$tags\"" || true)
+}
+EOF2
+)
+
+          local deploy_response=$(curl -s -X POST "$PM_API/api/servers/start" \
+            -H "Content-Type: application/json" \
+            -H "X-Claude-Session-ID: $CLAUDE_SESSION_ID" \
+            -H "X-Claude-PID: $CLAUDE_PID" \
+            -d "$deploy_payload")
+
+          local deploy_success=$(echo "$deploy_response" | jq -r '.deployment.success // false' 2>/dev/null)
+
+          if [ "$deploy_success" == "true" ]; then
+            echo "✅ 배포 완료!"
+            echo "   도메인: https://$subdomain.dclub.kr"
+            echo "   포트: $port (무제한)"
+          else
+            echo "⚠️  배포 실패 (수동 설정 필요)"
+            echo "$deploy_response" | jq '.deployment' 2>/dev/null || echo "$deploy_response"
+          fi
+        fi
+      fi
+    fi
+
+    echo ""
+
     # 헬스 체크
     sleep 2
     if curl -s "http://localhost:$port/health" > /dev/null 2>&1; then

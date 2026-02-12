@@ -510,6 +510,10 @@ AI가 자동으로 포트를 배정하고 웹서버를 관리하는 시스템. *
 - ✅ **금지 포트 회피**: 80, 443, 8080 등 자동 회피
 - ✅ **다중 서버 관리**: 여러 서버 동시 실행
 - ✅ **실시간 모니터링**: 웹 UI로 상태 확인
+- ✅ **(신규) 포트 검색**: 앱명, 태그, duration으로 검색
+- ✅ **(신규) 통계 히스토리**: 1시간마다 자동 저장
+- ✅ **(신규) 장기 프로젝트**: duration=4 포트 무제한 보존
+- ✅ **(신규) 배포 통합**: DNS Manager 자동 연동 (도메인 설정)
 
 ## API 사용법 (AI용)
 
@@ -569,6 +573,69 @@ curl http://localhost:45000/api/stats
 curl http://localhost:45000/api/ports/used
 ```
 
+### 포트 검색 (Phase 2 신규)
+
+```bash
+# 앱 이름으로 검색
+curl "http://localhost:45000/api/ports/search?app=freelang"
+
+# duration=4 (무제한) 포트만 검색
+curl "http://localhost:45000/api/ports/search?duration=4&status=IN_USE"
+
+# 태그로 검색
+curl "http://localhost:45000/api/ports/search?tags=production"
+
+# 복합 검색
+curl "http://localhost:45000/api/ports/search?app=myapp&duration=4&status=RESERVED"
+```
+
+### 통계 조회 (Phase 3 신규)
+
+```bash
+# 최신 통계 요약
+curl http://localhost:45000/api/stats/summary
+
+# 히스토리 조회 (지난 7일)
+curl "http://localhost:45000/api/stats/history?from=2026-01-29&to=2026-02-05"
+
+# 특정 기간 (일 단위)
+curl "http://localhost:45000/api/stats/history?from=2026-02-01&interval=day"
+```
+
+### 배포 통합 (Phase 5 신규)
+
+```bash
+# 포트 할당 + 자동 배포
+curl -X POST http://localhost:45000/api/servers/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-app",
+    "command": "PORT={port} npm start",
+    "reason": "프로덕션 배포",
+    "duration": 4,
+    "deploy": true,
+    "subdomain": "myapp",
+    "server": "253"
+  }'
+
+# 응답:
+{
+  "success": true,
+  "port": 40015,
+  "server_id": 5,
+  "deployment": {
+    "success": true,
+    "url": "https://myapp.dclub.kr"
+  },
+  "expires_at": null  # duration=4이므로 무제한
+}
+```
+
+**배포 옵션 (선택사항)**:
+- `deploy`: true (배포 활성화)
+- `subdomain`: 서브도메인 (필수 if deploy=true)
+- `server`: 대상 서버 (기본: "253")
+
 ## 사용 시나리오
 
 **사용자**: "Node.js 앱 3개 실행해"
@@ -617,6 +684,35 @@ curl http://localhost:45000/api/stats | jq .
 | Express | `PORT={port} node app.js` |
 
 **중요**: `{port}` 플레이스홀더는 반드시 포함해야 함.
+
+## Helper 스크립트 사용 (Phase 5 업데이트됨)
+
+```bash
+# 로드
+source /home/kimjin/.claude/port-manager-helper.sh
+
+# 기본 사용
+pm_start "my-app" "PORT={port} npm start" "API 개발" 1
+
+# 무제한 포트 + 배포 (대화형)
+pm_start "prod-app" "PORT={port} npm start" "프로덕션" 4
+# → 자동으로 배포 질문 나타남
+# → 서브도메인 입력 후 자동 배포
+
+# 목록 조회
+pm_list
+pm_list RUNNING
+
+# 서버 중지 (포트 유지 if duration=4)
+pm_stop 1
+
+# 서버 취소 (포트 해제)
+pm_cancel 1
+
+# 포트/통계 확인
+pm_ports
+pm_health
+```
 
 ## meeting.dclub.kr 연계
 
@@ -1448,5 +1544,111 @@ make
 
 - Gogs 홈: https://gogs.dclub.kr/kim
 - 웹 대시보드: http://localhost:8082 (./kpm server 실행 후)
+
+---
+
+# Proof_ai 프로젝트 상태 (2026-02-05 최종 테스트 완료)
+
+## 📊 현재 완성도
+- **Phase 5 (모니터링)**: ✅ 완성 (정상 작동)
+  - MetricsCollector: CPU, Memory, Error Rate, Response Time 수집
+  - LogAggregator: 구조화된 로깅 (DEBUG/INFO/WARN/ERROR/FATAL)
+  - 모니터링 REST API: /monitoring/health, /monitoring/metrics, /monitoring/dashboard
+
+- **Phase 5+ (MonitoringBot)**: ✅ 활성 (45회 스캔, 2회 경고, 2회 조치)
+  - 10초 주기 자동 스캔 (실행 중)
+  - 임계값 기반 경고 (CPU 80%, Memory 900MB, Error Rate 5%, Response Time 5000ms)
+  - 자동 응답: cleanup_memory, optimize_cpu 등
+  - REST API: /bot/status, /bot/reports, /bot/logs
+
+- **Phase 6 (코드 생성기)**: ✅ 구현 (마이크로서비스 생성 테스트 완료)
+  - MicroserviceGenerator: Intent → Express 마이크로서비스 자동 생성
+  - DeploymentGenerator: PM2, Docker, Nginx 설정 자동 생성
+  - REST API: /api/generate/microservice, /api/generate/deployment, /api/generate/full-stack
+
+## 🚀 포트 및 서비스
+
+### 고정 포트 (시스템)
+- **45000**: Port Manager API (자동 포트 할당)
+- **39999**: Proof_ai API Server (기본값)
+
+### 동적 포트 (40000-49998)
+- Port Manager에서 자동 할당
+- 새 서비스 배포 시 충돌 방지
+
+## 🔌 주요 기술 스택
+- **언어**: TypeScript, Node.js, Express.js
+- **파서**: Intent Parser (자체 구현)
+- **검증**: Z3 Theorem Prover 통합
+- **모니터링**: MetricsCollector + MonitoringBot
+- **배포**: Port Manager + PM2/Docker 설정 자동화
+- **저장소**: Gogs (https://gogs.dclub.kr/kim/Proof_ai.git)
+
+## 📝 빌드 및 실행
+
+```bash
+# 빌드
+npm run build
+
+# 개발 모드 (고정 포트)
+PORT=39999 node dist/api-server.js
+
+# Port Manager 자동 포트 할당
+PORT=39999 node dist/api-server.js  # Port Manager 시도 → 실패 시 39999로 폴백
+```
+
+## 🎯 주요 엔드포인트
+
+### 모니터링 (MonitoringBot)
+- `GET /bot/status` - 봇 상태 및 최근 스캔 결과
+- `GET /bot/reports` - 정기 리포트 목록
+- `GET /bot/logs` - 봇 실행 로그
+
+### 헬스 & 메트릭
+- `GET /monitoring/health` - 시스템 건강 상태
+- `GET /monitoring/metrics` - 상세 메트릭
+- `GET /monitoring/dashboard` - 통합 대시보드
+- `POST /monitoring/record-metric` - 커스텀 메트릭 기록
+
+### 코드 생성 (Phase 6)
+- `POST /api/generate/microservice` - 마이크로서비스 코드 생성
+- `POST /api/generate/deployment` - 배포 설정 생성
+- `POST /api/generate/full-stack` - 풀스택 생성
+
+### 핵심 컴파일러
+- `POST /api/proof/parse` - Intent 파싱
+- `POST /api/proof/check` - Intent 검증 (Z3)
+- `POST /api/proof/compile` - 완전 컴파일
+
+## 🤖 MonitoringBot vs Port Manager
+
+### MonitoringBot (포트 39999)
+- **역할**: 시스템 건강 감시 + 자동 응답
+- **주기**: 10초마다 스캔
+- **감시**: CPU, Memory, Error Rate, Response Time
+- **액션**: 임계값 초과 시 자동 조치 실행
+
+### Port Manager (포트 45000)
+- **역할**: 서비스 포트 자동 할당 및 관리
+- **범위**: 40000-49998
+- **기능**: 포트 충돌 방지, 금지 포트 회피
+- **생명주기**: 포트 생성 → 할당 → 해제
+
+## 📦 최근 커밋
+```
+dcabe23 - feat: Phase 6 - Microservice & Deployment Code Generators
+99efa9e - feat: Integrate Port Manager for dynamic port allocation
+eba2810 - feat: Add MonitoringBot with auto-remediation
+```
+
+## ⚠️ 알려진 이슈
+- 없음 (현재 운영 정상)
+
+## 🔍 테스트 상태
+- ✅ TypeScript 컴파일: 성공
+- ✅ 서버 시작: 정상 (포트 39999)
+- ✅ 봇 모니터링: 활성 (10초 스캔 중)
+- ✅ 모니터링 엔드포인트: 모두 작동
+- ✅ Gogs 푸시: 완료
 
 ---
