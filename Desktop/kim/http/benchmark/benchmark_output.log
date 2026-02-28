@@ -1,0 +1,65 @@
+================================================
+Static File Server Performance Benchmark
+================================================
+
+
+================================================
+1. C Static Server
+================================================
+
+[LAUNCH] Starting C server on port 17888...
+[BENCHMARK] Running Apache Bench...
+  Requests: 5000
+  Concurrency: 50
+  File: small.dat (10 KB)
+
+./benchmark.sh: line 76: ab: command not found
+
+
+================================================
+2. Node.js Native HTTP Server
+================================================
+
+[LAUNCH] Starting Node.js HTTP server on port 17889...
+[BENCHMARK] Running Apache Bench...
+  Requests: 5000
+  Concurrency: 50
+  File: small.dat (10 KB)
+
+./benchmark.sh: line 108: ab: command not found
+
+
+================================================
+3. Express.js Server
+================================================
+
+⚠️  Express not installed. Installing...
+[LAUNCH] Starting Express server on port 17890...
+[BENCHMARK] Running Apache Bench...
+  Requests: 5000
+  Concurrency: 50
+  File: small.dat (10 KB)
+
+./benchmark.sh: line 146: ab: command not found
+
+
+================================================
+Performance Summary
+================================================
+
+Requests per second (RPS):
+
+  C Static Server:         req/s
+  Node.js HTTP Server:     req/s
+  Express.js Server:       req/s
+
+Performance Analysis:
+  C is x faster than Node.js HTTP
+  C is x faster than Express.js
+
+Detailed results saved in:
+  /tmp/c_results.txt
+  /tmp/nodejs_results.txt
+  /tmp/express_results.txt
+
+✅ Benchmark complete!

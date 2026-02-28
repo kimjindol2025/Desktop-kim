@@ -1,0 +1,50 @@
+/**
+ * FreeLang HTTP Server Example
+ * Usage: freelang http-server.free
+ * Test: curl http://localhost:8000/health
+ */
+
+import http from "../index.free"
+import json from "../../json/index.free"
+
+// Create HTTP server with async handler
+server = http.createServer(async (req, res) => {
+  console.log(`${req.method} ${req.url}`)
+
+  // Route handling
+  if req.url == "/health" {
+    res.status(200).json({
+      status: "ok"
+      uptime: process.uptime()
+      timestamp: new Date().toISOString()
+    })
+  }
+  else if req.url == "/api/ping" {
+    res.status(200).json({
+      message: "pong"
+      time: Date.now()
+    })
+  }
+  else if req.url.startsWith("/api/echo") {
+    data = json.parse(req.body)
+    res.status(200).json({
+      echo: data
+      received_at: Date.now()
+    })
+  }
+  else {
+    res.status(404).json({
+      error: "Not Found"
+      path: req.url
+    })
+  }
+})
+
+// Start listening
+server.listen(8000)
+console.log("✅ HTTP Server started on http://localhost:8000")
+
+// Keep server running
+while true {
+  await sleep(1000)
+}

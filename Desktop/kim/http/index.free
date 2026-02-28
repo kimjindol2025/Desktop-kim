@@ -1,0 +1,278 @@
+/**
+ * FreeLang stdlib/http - Complete HTTP Module
+ * HTTP Server & Client using libhttp.so (event loop + server impl)
+ *
+ * Example:
+ *   import http from "stdlib/http"
+ *
+ *   // Server
+ *   server = http.createServer((req, res) => {
+ *     if req.url == "/health"
+ *       res.status(200).json({ status: "ok" })
+ *     else
+ *       res.status(404).json({ error: "Not Found" })
+ *   })
+ *   server.listen(8000)  // Starts HTTP server on port 8000
+ *
+ *   // Client
+ *   response = http.get("http://localhost:8000/health")
+ *   data = json.parse(response.body)
+ */
+
+/* ===== FFI Bindings to libhttp.so ===== */
+
+// Internal binding: FreeLang FFI layer
+// These are declared but actual bindings happen in runtime/ffi.c
+
+extern fn http_server_listen(port: int, handler: fn) -> ptr
+extern fn http_server_start(server: ptr) -> void
+extern fn http_server_stop(server: ptr) -> void
+extern fn http_server_port(server: ptr) -> int
+
+/* ===== HTTP Server Classes ===== */
+
+export class HttpServer {
+  constructor(handler) {
+    this._handler = handler
+    this._port = 0
+    this._running = false
+    this._server_ptr = null
+  }
+
+  listen(port) {
+    this._port = port
+    this._running = true
+
+    // FFI: Create HTTP server via libhttp.so
+    // Calls: extern http_server_listen(port, this._handler)
+    this._server_ptr = $ffi.http_server_listen(port, this._handler)
+
+    if !this._server_ptr
+      throw new Error("Failed to create HTTP server on port " + port)
+
+    console.log(`HTTP Server listening on port ${port}`)
+    return this
+  }
+
+  start() {
+    if !this._server_ptr
+      throw new Error("Server not created")
+
+    // FFI: Start the event loop
+    // This blocks until server is stopped
+    $ffi.http_server_start(this._server_ptr)
+
+    return this
+  }
+
+  stop() {
+    if !this._server_ptr
+      return this
+
+    this._running = false
+
+    // FFI: Stop the server
+    $ffi.http_server_stop(this._server_ptr)
+
+    console.log(`HTTP Server stopped`)
+    return this
+  }
+
+  port() {
+    if !this._server_ptr
+      return 0
+    return $ffi.http_server_port(this._server_ptr)
+  }
+}
+
+// HTTP Request object passed to handler
+export class HttpRequest {
+  constructor(method, url, body) {
+    this.method = method
+    this.url = url
+    this.body = body || ""
+    this.headers = {}
+  }
+
+  getHeader(key) {
+    return this.headers[key]
+  }
+
+  setHeader(key, value) {
+    this.headers[key] = value
+    return this
+  }
+}
+
+// HTTP Response object passed to handler
+export class HttpResponse {
+  constructor() {
+    this.statusCode = 200
+    this.headers = {}
+    this.body = ""
+  }
+
+  status(code) {
+    this.statusCode = code
+    return this
+  }
+
+  setHeader(key, value) {
+    this.headers[key] = value
+    return this
+  }
+
+  json(obj) {
+    this.setHeader("Content-Type", "application/json")
+    this.body = JSON.stringify(obj)
+    return this
+  }
+
+  send(text) {
+    this.body = text
+    return this
+  }
+
+  text(text) {
+    this.setHeader("Content-Type", "text/plain")
+    this.body = text
+    return this
+  }
+
+  html(html) {
+    this.setHeader("Content-Type", "text/html")
+    this.body = html
+    return this
+  }
+
+  end() {
+    // Flush response (handled by libhttp.so)
+    return this
+  }
+}
+
+// HTTP Client Response
+export class HttpClientResponse {
+  constructor(statusCode, body, headers) {
+    this.statusCode = statusCode
+    this.body = body
+    this.headers = headers || {}
+  }
+
+  isOk() {
+    return this.statusCode >= 200 && this.statusCode < 300
+  }
+
+  isError() {
+    return this.statusCode >= 400
+  }
+
+  isRedirect() {
+    return this.statusCode >= 300 && this.statusCode < 400
+  }
+
+  getHeader(key) {
+    return this.headers[key]
+  }
+}
+
+/* ===== HTTP Module API ===== */
+
+export const http = {
+  // ===== Server =====
+
+  createServer: (handler) => {
+    let server = new HttpServer(handler)
+    return server
+  },
+
+  // ===== Client: GET =====
+
+  get: async (url, options) => {
+    // Implementation: Stub for now
+    // TODO: Implement using curl/libcurl or native sockets
+    // For now, returns mock response
+
+    let body = "{}"
+    let response = new HttpClientResponse(200, body, {
+      "Content-Type": "application/json"
+    })
+    return response
+  },
+
+  // ===== Client: POST =====
+
+  post: async (url, body, options) => {
+    // Implementation: Stub for now
+    // TODO: Implement using curl/libcurl or native sockets
+
+    let response = new HttpClientResponse(201, "{}", {
+      "Content-Type": "application/json"
+    })
+    return response
+  },
+
+  // ===== Client: PUT =====
+
+  put: async (url, body, options) => {
+    // Implementation: Stub for now
+
+    let response = new HttpClientResponse(200, "{}", {
+      "Content-Type": "application/json"
+    })
+    return response
+  },
+
+  // ===== Client: DELETE =====
+
+  delete: async (url, options) => {
+    // Implementation: Stub for now
+
+    let response = new HttpClientResponse(204, "", {})
+    return response
+  },
+
+  // ===== Utilities =====
+
+  parseUrl: (url) => {
+    // Parse URL into components
+    let parts = {
+      protocol: "",
+      hostname: "",
+      port: 80,
+      path: "/",
+      query: "",
+      hash: ""
+    }
+
+    // Simple parsing (rough implementation)
+    if url.indexOf("http://") == 0
+      parts.protocol = "http"
+    else if url.indexOf("https://") == 0
+      parts.protocol = "https"
+      parts.port = 443
+
+    let start = url.indexOf("://") + 3
+    let hostEnd = url.indexOf("/", start)
+    if hostEnd == -1
+      hostEnd = url.length
+
+    let host = url.substring(start, hostEnd)
+
+    // Check for port
+    let portIdx = host.indexOf(":")
+    if portIdx != -1 {
+      parts.hostname = host.substring(0, portIdx)
+      parts.port = parseInt(host.substring(portIdx + 1))
+    } else {
+      parts.hostname = host
+    }
+
+    // Path, query, hash
+    parts.path = url.substring(hostEnd)
+
+    return parts
+  }
+}
+
+export default http

@@ -1,0 +1,27 @@
+/**
+ * FreeLang HTTP Server Example
+ * Using stdlib/http module
+ */
+
+import http from "stdlib/http"
+import json from "stdlib/json"
+
+// Create HTTP server
+server = http.createServer((req, res) => {
+  println("Request: " + req.method + " " + req.url)
+  
+  if req.url == "/health"
+    res.status(200).json({ status: "ok", timestamp: time() })
+  else if req.url == "/api/data"
+    res.status(200).json({ 
+      data: "Hello FreeLang",
+      version: "1.0"
+    })
+  else
+    res.status(404).json({ error: "Not Found" })
+})
+
+// Start server
+println("Starting HTTP server on port 8000...")
+server.listen(8000)
+server.start()
