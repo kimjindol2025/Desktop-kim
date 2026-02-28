@@ -1,0 +1,46 @@
+[Unit]
+Description=Pattern Vector DB Instance %i (Port %i)
+Documentation=https://gogs.dclub.kr/kim/zero-copy-db-latest
+After=network.target
+PartOf=pattern-vector-db.target
+
+[Service]
+Type=notify
+User=kimjin
+WorkingDirectory=/home/kimjin/Pattern-Vector-DB
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+Environment="PORT=%i"
+
+# FastAPI 웹 대시보드 (동적 포트)
+ExecStart=/usr/bin/python3 -m uvicorn src.api.web_dashboard:app \
+  --host 0.0.0.0 \
+  --port %i \
+  --workers 2 \
+  --access-log
+
+# 프로세스 관리
+Restart=on-failure
+RestartSec=10s
+StartLimitInterval=60s
+StartLimitBurst=3
+
+# 리소스 제한
+MemoryLimit=1G
+CPUQuota=75%
+TasksMax=512
+
+# 로깅
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pvdb-%i
+
+# 보안
+PrivateTmp=yes
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/home/kimjin/Pattern-Vector-DB/logs
+
+[Install]
+WantedBy=multi-user.target
