@@ -1,0 +1,36 @@
+{
+  "name": "@pattern-vector/db",
+  "version": "0.1.0-alpha",
+  "description": "Pattern Vector DB: AI-native pattern validation and recommendation system",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write src/**/*.ts"
+  },
+  "keywords": [
+    "vector-db",
+    "pattern-matching",
+    "ai-verification",
+    "semantic-search",
+    "coding-patterns"
+  ],
+  "author": "Claude Haiku 4.5",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "minimatch": "^10.2.4",
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.0.0",
+    "typescript": "^5.0.0"
+  }
+}
